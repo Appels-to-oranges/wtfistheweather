@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WTF Is The Weather</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <nav>
+    <a href="/">WTF Is The Weather</a>
+  </nav>
+
+  <main class="weather-wrapper">
+    <h1 class="weather-title">Weather</h1>
+
+    {% if error_msg %}
+    <p class="error-msg">{{ error_msg }}</p>
+    {% endif %}
+
+    {% if city and state %}
+    <div class="weather-location">{{ city }}, {{ state }}</div>
+    {% endif %}
+
+    {% if current_weather %}
+    <p class="weather-desc">{{ current_weather }}</p>
+    {% endif %}
+
+    {% if sunrise and sunset %}
+    <div class="weather-meta">
+      <span>{{ sunrise }}</span>
+      <span>{{ sunset }}</span>
+    </div>
+    {% endif %}
+
+    <div id="manualLocation">
+      <div class="search-container">
+        <input class="input-loc" type="text" id="locationInput" placeholder="Search for a city..." oninput="fetchCities()" autocomplete="off">
+        <ul id="suggestions" class="suggestions"></ul>
+      </div>
+    </div>
+
+    <div class="chart-container">{{ plot|safe }}</div>
+
+    {% if forecast_text %}
+    <p class="section-label">5-Day Outlook</p>
+    <div class="daily-forecast">
+      <ul>
+        {% for day in forecast_text %}
+        <li>{{ day }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Payson Carpenter</p>
+  </footer>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasLatLon = urlParams.has("lat") && urlParams.has("lon");
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            if (!hasLatLon) {
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.set("lat", position.coords.latitude);
+              newUrl.searchParams.set("lon", position.coords.longitude);
+              window.location.href = newUrl.toString();
+            }
+          },
+          function (error) {
+            console.warn("Geolocation denied or failed:", error.message);
+          }
+        );
+      }
+
+      document.addEventListener("click", function (e) {
+        const suggestions = document.getElementById("suggestions");
+        if (!e.target.closest(".search-container")) {
+          suggestions.innerHTML = "";
+        }
+      });
+    });
+
+    let debounceTimer;
+    function fetchCities() {
+      clearTimeout(debounceTimer);
+      const input = document.getElementById("locationInput").value;
+      const suggestions = document.getElementById("suggestions");
+
+      if (input.length < 3) {
+        suggestions.innerHTML = "";
+        return;
+      }
+
+      debounceTimer = setTimeout(async () => {
+        try {
+          const response = await fetch(`/search_location?query=${encodeURIComponent(input)}`);
+          const data = await response.json();
+          suggestions.innerHTML = "";
+
+          data.forEach((city) => {
+            const li = document.createElement("li");
+            li.textContent = city.name;
+            li.addEventListener("click", function () {
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.set("lat", city.lat);
+              newUrl.searchParams.set("lon", city.lon);
+              window.location.href = newUrl.toString();
+            });
+            suggestions.appendChild(li);
+          });
+        } catch (error) {
+          console.error("Error fetching cities:", error);
+        }
+      }, 250);
+    }
+  </script>
+</body>
+</html>
