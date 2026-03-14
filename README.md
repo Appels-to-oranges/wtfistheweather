@@ -18,4 +18,4 @@ The app runs on `http://localhost:5000/`.
 - Set environment variables:
   - `OPENWEATHER_API_KEY`
   - `OPENCAGE_API_KEY`
-- Railway will use `Procfile` to launch `gunicorn app:app`.
+- Railway will use `Procfile` to launch gunicorn bound to `0.0.0.0:$PORT` with a single worker profile to avoid memory crashes.
