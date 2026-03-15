@@ -20,30 +20,30 @@ OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 def build_vibe_line(description, temp_f, wind_mph, precip_chance):
     desc = (description or "").lower()
     if "thunder" in desc:
-        return "Sky drama detected. Maybe admire this one from indoors."
+        return "Thunderstorms are likely. Indoor plans are the safer call."
     if "snow" in desc:
-        return "It is giving winter side quest energy."
+        return "Snow conditions are active. Expect slower travel and colder surfaces."
     if "rain" in desc or precip_chance >= 60:
-        return "Bring an umbrella. Main character energy does not block rain."
+        return "Rain is likely. Bring an umbrella and waterproof layers."
     if temp_f >= 95:
-        return "Hot enough to question all life choices outside."
+        return "Heat is elevated. Limit prolonged exposure and hydrate."
     if temp_f <= 35:
-        return "Cold enough that your coffee needs emotional support."
+        return "Cold conditions are likely. Dress in insulated layers."
     if wind_mph >= 20:
-        return "Wind is in a chaotic mood right now."
+        return "Wind speeds are high. Secure loose items outdoors."
     return "Weather is mostly cooperative. Proceed with confidence."
 
 
 def build_activity_hint(temp_f, wind_mph, precip_chance):
     if precip_chance >= 65:
-        return "Plan: indoor plans win today."
+        return "Recommendation: prioritize indoor activities."
     if temp_f >= 88:
-        return "Plan: shade, water, and minimal heroics."
+        return "Recommendation: seek shade, drink water, and avoid peak heat."
     if temp_f <= 40:
-        return "Plan: layers first, ambition second."
+        return "Recommendation: wear layers and limit time outside."
     if wind_mph >= 18:
-        return "Plan: secure hats and loose opinions."
-    return "Plan: great window for a walk, patio, or quick errand run."
+        return "Recommendation: account for wind chill and gusts."
+    return "Recommendation: good conditions for normal outdoor plans."
 
 
 @app.route("/")

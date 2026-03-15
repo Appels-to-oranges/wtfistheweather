@@ -10,14 +10,14 @@
 <body>
   <header class="topbar">
     <a href="/" class="brand">WTF Is The Weather</a>
-    <p class="tagline">Useful forecast first, mild chaos second.</p>
+    <p class="tagline">Useful forecast first, clear guidance second.</p>
   </header>
 
   <main class="page">
     <section class="card hero">
       <div>
         <p class="eyebrow">Forecast cockpit</p>
-        <h1>Know what is happening outside before you commit to pants.</h1>
+        <h1>Know what is happening outside before you head out.</h1>
         <p class="lead">
           Search any city or use your current location for a live weather read, chart, and practical next-step guidance.
         </p>
@@ -59,7 +59,7 @@
 
     <section class="info-layout">
       <article class="card">
-        <h2>WTF Summary</h2>
+        <h2>Weather Summary</h2>
         <p class="summary-line">{{ current_weather }}</p>
         <p class="vibe">{{ vibe_line }}</p>
         <p class="hint">{{ activity_hint }}</p>
@@ -79,7 +79,7 @@
             <p>{{ item.time }}</p>
             <img src="{{ item.icon_url }}" alt="{{ item.desc }}">
             <strong>{{ item.temp }}&deg;F</strong>
-            <small>{{ item.pop }}% rain</small>
+            <small>{{ item["pop"] }}% rain</small>
           </div>
           {% endfor %}
         </div>
