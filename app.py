@@ -16,6 +16,58 @@ app = Flask(__name__, template_folder="templates")
 OPENCAGE_API_KEY = os.getenv("OPENCAGE_API_KEY")
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
+CHART_COLORS = {
+    "temp": "#74c0fc",
+    "humidity": "#5ad3a6",
+    "precip_bar": "rgba(116, 192, 252, 0.35)",
+    "axis_text": "#d6def8",
+    "grid": "rgba(255,255,255,0.09)",
+    "hover_bg": "rgba(16,20,34,0.94)",
+    "hover_border": "rgba(116,192,252,0.45)",
+}
+
+
+def apply_standard_chart_layout(fig, left_axis_title, right_axis_title, x_tickformat):
+    fig.update_layout(
+        hovermode="x",
+        hoverlabel=dict(
+            bgcolor=CHART_COLORS["hover_bg"],
+            font_color="white",
+            bordercolor=CHART_COLORS["hover_border"],
+        ),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="white", size=12),
+        margin=dict(l=50, r=50, t=14, b=58),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        xaxis=dict(
+            color=CHART_COLORS["axis_text"],
+            showgrid=True,
+            gridcolor=CHART_COLORS["grid"],
+            zeroline=False,
+            tickformat=x_tickformat,
+            tickfont=dict(size=11),
+        ),
+        yaxis=dict(
+            title=left_axis_title,
+            titlefont=dict(color=CHART_COLORS["temp"]),
+            tickfont=dict(color=CHART_COLORS["temp"]),
+            showgrid=False,
+            zeroline=False,
+        ),
+        yaxis2=dict(
+            title=right_axis_title,
+            titlefont=dict(color=CHART_COLORS["axis_text"]),
+            tickfont=dict(color=CHART_COLORS["axis_text"]),
+            overlaying="y",
+            side="right",
+            range=[0, 100],
+            showgrid=False,
+            zeroline=False,
+        ),
+        bargap=0.12,
+    )
+
 
 def build_vibe_line(description, temp_f, wind_mph, precip_chance):
     desc = (description or "").lower()
@@ -147,7 +199,7 @@ def weather():
                 y=next_24h_df["temperature"],
                 name="Temperature",
                 mode="lines+markers",
-                line=dict(width=2.5, color="#74c0fc"),
+                line=dict(width=2.6, color=CHART_COLORS["temp"]),
                 marker=dict(size=6),
                 yaxis="y",
                 hovertemplate="<b>%{x|%I:%M %p}</b><br>Temp: %{y:.0f}\N{DEGREE SIGN}F<extra></extra>",
@@ -158,44 +210,13 @@ def weather():
                 x=next_24h_df["datetime"],
                 y=next_24h_df["pop"],
                 name="Precipitation",
-                marker=dict(color="rgba(116, 192, 252, 0.35)"),
+                marker=dict(color=CHART_COLORS["precip_bar"]),
                 width=3 * 3600 * 1000,
                 yaxis="y2",
                 hovertemplate="<b>%{x|%I:%M %p}</b><br>Precip: %{y:.0f}%<extra></extra>",
             )
         )
-        fig_24h.update_layout(
-            hovermode="x",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="white", size=12),
-            margin=dict(l=45, r=45, t=8, b=45),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-            xaxis=dict(
-                color="white",
-                showgrid=False,
-                tickformat="%I %p",
-                tickfont=dict(size=11),
-            ),
-            yaxis=dict(
-                title="Temp (F)",
-                titlefont=dict(color="#74c0fc"),
-                tickfont=dict(color="#74c0fc"),
-                showgrid=False,
-                zeroline=False,
-            ),
-            yaxis2=dict(
-                title="Precip (%)",
-                titlefont=dict(color="#d6def8"),
-                tickfont=dict(color="#d6def8"),
-                overlaying="y",
-                side="right",
-                range=[0, 100],
-                showgrid=False,
-                zeroline=False,
-            ),
-            bargap=0.15,
-        )
+        apply_standard_chart_layout(fig_24h, "Temperature (F)", "Precipitation (%)", "%I %p")
         hourly_plot = fig_24h.to_html(full_html=False, config={"displayModeBar": False})
 
         sunrise_str = None
@@ -244,7 +265,7 @@ def weather():
                 yaxis="y",
                 mode="lines+markers",
                 marker=dict(size=5),
-                line=dict(width=2.5, color="#A67458"),
+                line=dict(width=2.6, color=CHART_COLORS["temp"]),
                 hovertemplate="<b>%{x|%b %d %I:%M %p}</b><br>Temp: %{y:.0f}\N{DEGREE SIGN}F<extra></extra>",
             )
         )
@@ -256,7 +277,7 @@ def weather():
                 yaxis="y2",
                 mode="lines+markers",
                 marker=dict(size=5),
-                line=dict(width=2.5, color="#3E848C"),
+                line=dict(width=2.4, color=CHART_COLORS["humidity"]),
                 hovertemplate="Humidity: %{y}%<extra></extra>",
             )
         )
@@ -266,7 +287,7 @@ def weather():
                 y=df["pop"],
                 name="Precip %",
                 yaxis="y2",
-                marker=dict(color="rgba(100, 149, 237, 0.35)"),
+                marker=dict(color=CHART_COLORS["precip_bar"]),
                 width=3 * 3600 * 1000,
                 hovertemplate="Precip: %{y}%<extra></extra>",
             )
@@ -291,20 +312,16 @@ def weather():
             start=df["datetime"].min(), end=df["datetime"].max(), freq="12h"
         )
 
+        apply_standard_chart_layout(fig, "Temperature (F)", "Humidity / Precip (%)", "%b %d\n%I %p")
         fig.update_layout(
-            hovermode="x",
-            hoverlabel=dict(
-                bgcolor="rgba(30,30,30,0.9)",
-                font_color="white",
-                bordercolor="rgba(80,80,80,0.5)",
-            ),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="white", size=12),
             showlegend=True,
             shapes=night_rects,
+            autosize=True,
+            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
             yaxis=dict(
-                color="white",
+                title="Temperature (F)",
+                titlefont=dict(color=CHART_COLORS["temp"]),
+                tickfont=dict(color=CHART_COLORS["temp"]),
                 showgrid=False,
                 zeroline=False,
                 tickvals=temp_ticks,
@@ -312,29 +329,26 @@ def weather():
                 range=[temp_min, temp_max],
             ),
             yaxis2=dict(
+                title="Humidity / Precip (%)",
+                titlefont=dict(color=CHART_COLORS["axis_text"]),
+                tickfont=dict(color=CHART_COLORS["axis_text"]),
                 overlaying="y",
                 side="right",
-                color="white",
-                showgrid=False,
-                zeroline=False,
                 ticksuffix="%",
                 range=[0, 100],
+                showgrid=False,
+                zeroline=False,
             ),
             xaxis=dict(
-                color="white",
-                showgrid=False,
+                color=CHART_COLORS["axis_text"],
+                showgrid=True,
+                gridcolor=CHART_COLORS["grid"],
                 zeroline=False,
                 tickvals=tick_vals,
                 tickformat="%b %d\n%I %p",
                 tickangle=0,
                 tickfont=dict(size=11),
                 range=[df["datetime"].min(), df["datetime"].max()],
-            ),
-            autosize=True,
-            bargap=0,
-            margin=dict(l=50, r=50, t=10, b=60),
-            legend=dict(
-                orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5
             ),
         )
 
