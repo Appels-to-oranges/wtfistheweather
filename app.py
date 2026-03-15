@@ -139,17 +139,64 @@ def weather():
         today_lo = round(today_group["temperature"].min())
         max_pop_next_day = int(df.head(8)["pop"].max())
 
-        hourly_tiles = []
-        for _, row in df.head(8).iterrows():
-            hourly_tiles.append(
-                {
-                    "time": row["datetime"].strftime("%I %p").lstrip("0"),
-                    "temp": round(row["temperature"]),
-                    "pop": int(row["pop"]),
-                    "desc": row["description"].title(),
-                    "icon_url": f"https://openweathermap.org/img/wn/{row['icon']}@2x.png",
-                }
+        next_24h_df = df.head(8).copy()
+        fig_24h = go.Figure()
+        fig_24h.add_trace(
+            go.Scatter(
+                x=next_24h_df["datetime"],
+                y=next_24h_df["temperature"],
+                name="Temperature",
+                mode="lines+markers",
+                line=dict(width=2.5, color="#74c0fc"),
+                marker=dict(size=6),
+                yaxis="y",
+                hovertemplate="<b>%{x|%I:%M %p}</b><br>Temp: %{y:.0f}\N{DEGREE SIGN}F<extra></extra>",
             )
+        )
+        fig_24h.add_trace(
+            go.Bar(
+                x=next_24h_df["datetime"],
+                y=next_24h_df["pop"],
+                name="Precipitation",
+                marker=dict(color="rgba(116, 192, 252, 0.35)"),
+                width=3 * 3600 * 1000,
+                yaxis="y2",
+                hovertemplate="<b>%{x|%I:%M %p}</b><br>Precip: %{y:.0f}%<extra></extra>",
+            )
+        )
+        fig_24h.update_layout(
+            hovermode="x",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="white", size=12),
+            margin=dict(l=45, r=45, t=8, b=45),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+            xaxis=dict(
+                color="white",
+                showgrid=False,
+                tickformat="%I %p",
+                tickfont=dict(size=11),
+            ),
+            yaxis=dict(
+                title="Temp (F)",
+                titlefont=dict(color="#74c0fc"),
+                tickfont=dict(color="#74c0fc"),
+                showgrid=False,
+                zeroline=False,
+            ),
+            yaxis2=dict(
+                title="Precip (%)",
+                titlefont=dict(color="#d6def8"),
+                tickfont=dict(color="#d6def8"),
+                overlaying="y",
+                side="right",
+                range=[0, 100],
+                showgrid=False,
+                zeroline=False,
+            ),
+            bargap=0.15,
+        )
+        hourly_plot = fig_24h.to_html(full_html=False, config={"displayModeBar": False})
 
         sunrise_str = None
         sunset_str = None
@@ -320,7 +367,7 @@ def weather():
             today_hi=today_hi,
             today_lo=today_lo,
             max_pop_next_day=max_pop_next_day,
-            hourly_tiles=hourly_tiles,
+            hourly_plot=hourly_plot,
             vibe_line=vibe_line,
             activity_hint=activity_hint,
             local_generated_at=datetime.now(tz).strftime("%I:%M %p"),

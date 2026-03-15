@@ -73,15 +73,8 @@
 
       <article class="card">
         <h2>Next 24 Hours</h2>
-        <div class="hourly-grid">
-          {% for item in hourly_tiles %}
-          <div class="hourly-item">
-            <p>{{ item.time }}</p>
-            <img src="{{ item.icon_url }}" alt="{{ item.desc }}">
-            <strong>{{ item.temp }}&deg;F</strong>
-            <small>{{ item["pop"] }}% rain</small>
-          </div>
-          {% endfor %}
+        <div class="chart-container">
+          {{ hourly_plot|safe }}
         </div>
       </article>
     </section>
