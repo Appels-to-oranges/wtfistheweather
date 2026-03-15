@@ -8,76 +8,142 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-  <nav>
-    <a href="/">WTF Is The Weather</a>
-  </nav>
+  <header class="topbar">
+    <a href="/" class="brand">WTF Is The Weather</a>
+    <p class="tagline">Useful forecast first, mild chaos second.</p>
+  </header>
 
-  <main class="weather-wrapper">
-    <h1 class="weather-title">Weather</h1>
+  <main class="page">
+    <section class="card hero">
+      <div>
+        <p class="eyebrow">Forecast cockpit</p>
+        <h1>Know what is happening outside before you commit to pants.</h1>
+        <p class="lead">
+          Search any city or use your current location for a live weather read, chart, and practical next-step guidance.
+        </p>
+      </div>
 
-    {% if error_msg %}
-    <p class="error-msg">{{ error_msg }}</p>
-    {% endif %}
-
-    {% if city and state %}
-    <div class="weather-location">{{ city }}, {{ state }}</div>
-    {% endif %}
-
-    {% if current_weather %}
-    <p class="weather-desc">{{ current_weather }}</p>
-    {% endif %}
-
-    {% if sunrise and sunset %}
-    <div class="weather-meta">
-      <span>{{ sunrise }}</span>
-      <span>{{ sunset }}</span>
-    </div>
-    {% endif %}
-
-    <div id="manualLocation">
       <div class="search-container">
         <input class="input-loc" type="text" id="locationInput" placeholder="Search for a city..." oninput="fetchCities()" autocomplete="off">
+        <button id="useMyLocation" class="action-btn" type="button">Use my location</button>
         <ul id="suggestions" class="suggestions"></ul>
       </div>
-    </div>
+      {% if error_msg %}
+      <p class="error-msg">{{ error_msg }}</p>
+      {% endif %}
+    </section>
 
-    <div class="chart-container">{{ plot|safe }}</div>
+    {% if plot %}
+    <section class="stats-grid">
+      <article class="card stat">
+        <span>Location</span>
+        <strong>{{ location_name }}</strong>
+        <small>Updated {{ local_generated_at }} local time</small>
+      </article>
+      <article class="card stat">
+        <span>Current</span>
+        <strong>{{ current_temp }}&deg;F</strong>
+        <small>Feels like {{ feels_like }}&deg;F</small>
+      </article>
+      <article class="card stat">
+        <span>Today</span>
+        <strong>{{ today_hi }}&deg; / {{ today_lo }}&deg;</strong>
+        <small>{{ max_pop_next_day }}% precip chance in next 24h</small>
+      </article>
+      <article class="card stat">
+        <span>Humidity & Wind</span>
+        <strong>{{ humidity_now }}% / {{ wind_now }} mph</strong>
+        <small>Outside behavior advisory</small>
+      </article>
+    </section>
+
+    <section class="info-layout">
+      <article class="card">
+        <h2>WTF Summary</h2>
+        <p class="summary-line">{{ current_weather }}</p>
+        <p class="vibe">{{ vibe_line }}</p>
+        <p class="hint">{{ activity_hint }}</p>
+        {% if sunrise and sunset %}
+        <div class="weather-meta">
+          <span>{{ sunrise }}</span>
+          <span>{{ sunset }}</span>
+        </div>
+        {% endif %}
+      </article>
+
+      <article class="card">
+        <h2>Next 24 Hours</h2>
+        <div class="hourly-grid">
+          {% for item in hourly_tiles %}
+          <div class="hourly-item">
+            <p>{{ item.time }}</p>
+            <img src="{{ item.icon_url }}" alt="{{ item.desc }}">
+            <strong>{{ item.temp }}&deg;F</strong>
+            <small>{{ item.pop }}% rain</small>
+          </div>
+          {% endfor %}
+        </div>
+      </article>
+    </section>
+
+    <section class="card chart-card">
+      <h2>Temperature, Humidity, and Precipitation Trend</h2>
+      <div class="chart-container">{{ plot|safe }}</div>
+    </section>
 
     {% if forecast_text %}
-    <p class="section-label">5-Day Outlook</p>
-    <div class="daily-forecast">
-      <ul>
+    <section class="card">
+      <h2>5-Day Practical Outlook</h2>
+      <ul class="daily-forecast">
         {% for day in forecast_text %}
         <li>{{ day }}</li>
         {% endfor %}
       </ul>
-    </div>
+    </section>
+    {% endif %}
+    {% else %}
+    <section class="card empty-state">
+      <h2>Start with a location</h2>
+      <p>Search for a city above or click <strong>Use my location</strong> to load your local weather dashboard.</p>
+    </section>
     {% endif %}
   </main>
 
-  <footer>
+  <footer class="footer">
     <p>&copy; 2026 Payson Carpenter</p>
   </footer>
 
   <script>
+    function requestGeolocation() {
+      if (!navigator.geolocation) {
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set("lat", position.coords.latitude);
+          newUrl.searchParams.set("lon", position.coords.longitude);
+          window.location.href = newUrl.toString();
+        },
+        function (error) {
+          console.warn("Geolocation denied or failed:", error.message);
+        }
+      );
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
       const urlParams = new URLSearchParams(window.location.search);
       const hasLatLon = urlParams.has("lat") && urlParams.has("lon");
+      const useMyLocationBtn = document.getElementById("useMyLocation");
 
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          function (position) {
-            if (!hasLatLon) {
-              const newUrl = new URL(window.location.href);
-              newUrl.searchParams.set("lat", position.coords.latitude);
-              newUrl.searchParams.set("lon", position.coords.longitude);
-              window.location.href = newUrl.toString();
-            }
-          },
-          function (error) {
-            console.warn("Geolocation denied or failed:", error.message);
-          }
-        );
+      if (!hasLatLon) {
+        requestGeolocation();
+      }
+
+      if (useMyLocationBtn) {
+        useMyLocationBtn.addEventListener("click", function () {
+          requestGeolocation();
+        });
       }
 
       document.addEventListener("click", function (e) {

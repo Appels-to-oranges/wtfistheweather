@@ -17,6 +17,35 @@ OPENCAGE_API_KEY = os.getenv("OPENCAGE_API_KEY")
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
 
+def build_vibe_line(description, temp_f, wind_mph, precip_chance):
+    desc = (description or "").lower()
+    if "thunder" in desc:
+        return "Sky drama detected. Maybe admire this one from indoors."
+    if "snow" in desc:
+        return "It is giving winter side quest energy."
+    if "rain" in desc or precip_chance >= 60:
+        return "Bring an umbrella. Main character energy does not block rain."
+    if temp_f >= 95:
+        return "Hot enough to question all life choices outside."
+    if temp_f <= 35:
+        return "Cold enough that your coffee needs emotional support."
+    if wind_mph >= 20:
+        return "Wind is in a chaotic mood right now."
+    return "Weather is mostly cooperative. Proceed with confidence."
+
+
+def build_activity_hint(temp_f, wind_mph, precip_chance):
+    if precip_chance >= 65:
+        return "Plan: indoor plans win today."
+    if temp_f >= 88:
+        return "Plan: shade, water, and minimal heroics."
+    if temp_f <= 40:
+        return "Plan: layers first, ambition second."
+    if wind_mph >= 18:
+        return "Plan: secure hats and loose opinions."
+    return "Plan: great window for a walk, patio, or quick errand run."
+
+
 @app.route("/")
 @app.route("/weather")
 def weather():
@@ -40,6 +69,9 @@ def weather():
         current_resp = requests.get(current_url, timeout=10).json()
 
         temperature = current_resp["main"]["temp"]
+        feels_like = current_resp["main"].get("feels_like", temperature)
+        humidity_now = current_resp["main"].get("humidity", 0)
+        wind_now = current_resp.get("wind", {}).get("speed", 0)
         description = current_resp["weather"][0]["description"]
         current_weather = (
             f"The current temperature is {temperature}\N{DEGREE SIGN}F and the weather is {description}."
@@ -102,6 +134,22 @@ def weather():
                 summary += f", wind {avg_wind} mph"
             daily_summary.append(summary)
         forecast_text = daily_summary
+        today_group = list(df.groupby("date"))[0][1]
+        today_hi = round(today_group["temperature"].max())
+        today_lo = round(today_group["temperature"].min())
+        max_pop_next_day = int(df.head(8)["pop"].max())
+
+        hourly_tiles = []
+        for _, row in df.head(8).iterrows():
+            hourly_tiles.append(
+                {
+                    "time": row["datetime"].strftime("%I %p").lstrip("0"),
+                    "temp": round(row["temperature"]),
+                    "pop": int(row["pop"]),
+                    "desc": row["description"].title(),
+                    "icon_url": f"https://openweathermap.org/img/wn/{row['icon']}@2x.png",
+                }
+            )
 
         sunrise_str = None
         sunset_str = None
@@ -244,15 +292,38 @@ def weather():
         )
 
         plot = fig.to_html(full_html=False, config={"displayModeBar": False})
+        location_name = None
+        if city and state:
+            location_name = f"{city}, {state}"
+        elif city:
+            location_name = city
+        else:
+            location_name = f"{float(lat):.2f}, {float(lon):.2f}"
+
+        vibe_line = build_vibe_line(description, temperature, wind_now, max_pop_next_day)
+        activity_hint = build_activity_hint(temperature, wind_now, max_pop_next_day)
+
         return render_template(
             "weather.html",
             current_weather=current_weather,
             city=city,
             state=state,
+            location_name=location_name,
             sunrise=sunrise_str,
             sunset=sunset_str,
             plot=plot,
             forecast_text=forecast_text,
+            current_temp=round(temperature),
+            feels_like=round(feels_like),
+            humidity_now=round(humidity_now),
+            wind_now=round(wind_now),
+            today_hi=today_hi,
+            today_lo=today_lo,
+            max_pop_next_day=max_pop_next_day,
+            hourly_tiles=hourly_tiles,
+            vibe_line=vibe_line,
+            activity_hint=activity_hint,
+            local_generated_at=datetime.now(tz).strftime("%I:%M %p"),
         )
 
     except Exception as e:
