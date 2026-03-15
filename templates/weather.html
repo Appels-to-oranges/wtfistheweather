@@ -57,7 +57,7 @@
       </article>
     </section>
 
-    <section class="info-layout">
+    <section class="info-layout summary-layout">
       <article class="card">
         <h2>Weather Summary</h2>
         <p class="summary-line">{{ current_weather }}</p>
@@ -70,17 +70,26 @@
         </div>
         {% endif %}
       </article>
-
-      <article class="card">
-        <h2>Next 24 Hours</h2>
-        <div class="chart-container">
-          {{ hourly_plot|safe }}
-        </div>
-      </article>
     </section>
 
     <section class="card chart-card">
-      <h2>Temperature, Humidity, and Precipitation Trend</h2>
+      <div class="chart-header">
+        <h2>Temperature, Humidity, and Precipitation Trend</h2>
+        <div class="timeframe-toggle">
+          <a
+            class="timeframe-btn {% if chart_timeframe == '24h' %}active{% endif %}"
+            href="/?lat={{ lat_query }}&lon={{ lon_query }}&tf=24h"
+          >
+            24 Hours
+          </a>
+          <a
+            class="timeframe-btn {% if chart_timeframe == '5d' %}active{% endif %}"
+            href="/?lat={{ lat_query }}&lon={{ lon_query }}&tf=5d"
+          >
+            5 Days
+          </a>
+        </div>
+      </div>
       <div class="chart-container">{{ plot|safe }}</div>
     </section>
 

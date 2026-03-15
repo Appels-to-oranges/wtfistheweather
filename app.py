@@ -106,6 +106,9 @@ def weather():
 
     lat = request.args.get("lat")
     lon = request.args.get("lon")
+    timeframe = request.args.get("tf", "5d").lower()
+    if timeframe not in {"24h", "5d"}:
+        timeframe = "5d"
 
     try:
         forecast_url = (
@@ -191,33 +194,7 @@ def weather():
         today_lo = round(today_group["temperature"].min())
         max_pop_next_day = int(df.head(8)["pop"].max())
 
-        next_24h_df = df.head(8).copy()
-        fig_24h = go.Figure()
-        fig_24h.add_trace(
-            go.Scatter(
-                x=next_24h_df["datetime"],
-                y=next_24h_df["temperature"],
-                name="Temperature",
-                mode="lines+markers",
-                line=dict(width=2.6, color=CHART_COLORS["temp"]),
-                marker=dict(size=6),
-                yaxis="y",
-                hovertemplate="<b>%{x|%I:%M %p}</b><br>Temp: %{y:.0f}\N{DEGREE SIGN}F<extra></extra>",
-            )
-        )
-        fig_24h.add_trace(
-            go.Bar(
-                x=next_24h_df["datetime"],
-                y=next_24h_df["pop"],
-                name="Precipitation",
-                marker=dict(color=CHART_COLORS["precip_bar"]),
-                width=3 * 3600 * 1000,
-                yaxis="y2",
-                hovertemplate="<b>%{x|%I:%M %p}</b><br>Precip: %{y:.0f}%<extra></extra>",
-            )
-        )
-        apply_standard_chart_layout(fig_24h, "Temperature (F)", "Precipitation (%)", "%I %p")
-        hourly_plot = fig_24h.to_html(full_html=False, config={"displayModeBar": False})
+        plot_df = df.head(8).copy() if timeframe == "24h" else df.copy()
 
         sunrise_str = None
         sunset_str = None
@@ -237,10 +214,10 @@ def weather():
 
         night_rects = []
         if sunrise_time and sunset_time:
-            df["daytime"] = df["datetime"].apply(
+            plot_df["daytime"] = plot_df["datetime"].apply(
                 lambda x: "day" if sunrise_time < x.time() <= sunset_time else "night"
             )
-            for _, row in df[df["daytime"] == "night"].iterrows():
+            for _, row in plot_df[plot_df["daytime"] == "night"].iterrows():
                 night_rects.append(
                     {
                         "type": "rect",
@@ -259,8 +236,8 @@ def weather():
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
-                x=df["datetime"],
-                y=df["temperature"],
+                x=plot_df["datetime"],
+                y=plot_df["temperature"],
                 name="Temperature",
                 yaxis="y",
                 mode="lines+markers",
@@ -271,8 +248,8 @@ def weather():
         )
         fig.add_trace(
             go.Scatter(
-                x=df["datetime"],
-                y=df["humidity"],
+                x=plot_df["datetime"],
+                y=plot_df["humidity"],
                 name="Humidity",
                 yaxis="y2",
                 mode="lines+markers",
@@ -283,8 +260,8 @@ def weather():
         )
         fig.add_trace(
             go.Bar(
-                x=df["datetime"],
-                y=df["pop"],
+                x=plot_df["datetime"],
+                y=plot_df["pop"],
                 name="Precip %",
                 yaxis="y2",
                 marker=dict(color=CHART_COLORS["precip_bar"]),
@@ -305,14 +282,18 @@ def weather():
                 )
             )
 
-        temp_min = max(0, int(df["temperature"].min() // 10) * 10 - 10)
-        temp_max = int(df["temperature"].max() // 10) * 10 + 20
+        temp_min = max(0, int(plot_df["temperature"].min() // 10) * 10 - 10)
+        temp_max = int(plot_df["temperature"].max() // 10) * 10 + 20
         temp_ticks = list(range(temp_min, temp_max + 1, 10))
+        tick_freq = "6h" if timeframe == "24h" else "12h"
         tick_vals = pd.date_range(
-            start=df["datetime"].min(), end=df["datetime"].max(), freq="12h"
+            start=plot_df["datetime"].min(), end=plot_df["datetime"].max(), freq=tick_freq
         )
 
-        apply_standard_chart_layout(fig, "Temperature (F)", "Humidity / Precip (%)", "%b %d\n%I %p")
+        x_tickformat = "%I %p" if timeframe == "24h" else "%b %d\n%I %p"
+        apply_standard_chart_layout(
+            fig, "Temperature (F)", "Humidity / Precip (%)", x_tickformat
+        )
         fig.update_layout(
             showlegend=True,
             shapes=night_rects,
@@ -345,10 +326,10 @@ def weather():
                 gridcolor=CHART_COLORS["grid"],
                 zeroline=False,
                 tickvals=tick_vals,
-                tickformat="%b %d\n%I %p",
+                tickformat=x_tickformat,
                 tickangle=0,
                 tickfont=dict(size=11),
-                range=[df["datetime"].min(), df["datetime"].max()],
+                range=[plot_df["datetime"].min(), plot_df["datetime"].max()],
             ),
         )
 
@@ -381,10 +362,12 @@ def weather():
             today_hi=today_hi,
             today_lo=today_lo,
             max_pop_next_day=max_pop_next_day,
-            hourly_plot=hourly_plot,
             vibe_line=vibe_line,
             activity_hint=activity_hint,
             local_generated_at=datetime.now(tz).strftime("%I:%M %p"),
+            chart_timeframe=timeframe,
+            lat_query=lat,
+            lon_query=lon,
         )
 
     except Exception as e:
